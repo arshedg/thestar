@@ -1,0 +1,8 @@
+{
+  "clientId": "943774849629-mf2cl73eorgl3klt4eclp9bvuur1ale5.apps.googleusercontent.com",
+  "projectId": "celebrity-6faf6",
+  "serviceAccountEmail": "",
+  "serviceAccountPrivateKeyFile": "INSERT/PATH/TO/PRIVATEKEY",
+  "widgetUrl": "http://fan-dev.com/oauthHandler",
+  "cookieName": "gtoken"
+}

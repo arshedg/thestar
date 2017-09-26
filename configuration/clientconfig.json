@@ -1,0 +1,9 @@
+{
+  "widgetUrl": "http://fan-dev.com/oauthHandler",
+  "signInSuccessUrl": "http://fan-dev.com/home",
+  "signOutUrl": "http://fan-dev.com/logout",
+  "oobActionUrl": "",
+  "apiKey": "AIzaSyBinjf1gWEROOqATIxxBr-pKzhes3WwfyM",
+  "siteName": "this site",
+  "signInOptions": ["password","microsoft","google","facebook"]
+}
