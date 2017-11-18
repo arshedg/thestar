@@ -28,13 +28,19 @@ repositories {
 
 
 dependencies {
-	compile("org.springframework.boot:spring-boot-starter-web") {
-		exclude module: "spring-boot-starter-tomcat"
+	compile("org.springframework.boot:spring-boot-starter-web:1.5.8.RELEASE")
+	compile("org.springframework.boot:spring-boot-starter-data-jpa:1.5.8.RELEASE")
+	compile("com.h2database:h2")
+	compile 'com.google.firebase:firebase-admin:5.5.0'
+	compile("com.hazelcast:hazelcast-spring:3.8")
+	compile("com.hazelcast:hazelcast:3.8")
+	compile("org.springframework.boot:spring-boot-starter-jetty:1.5.8.RELEASE")
+	compile("org.springframework.boot:spring-boot-starter-actuator:1.5.8.RELEASE")
+	compile("org.springframework.security:spring-security-web:4.2.3.RELEASE")
+	compile("org.springframework.security:spring-security-config:4.2.3.RELEASE")
+
+	runtime('org.postgresql:postgresql') {
+		exclude group: 'org.slf4j'
 	}
-	compile("org.springframework.boot:spring-boot-starter-jetty")
-	// end::jetty[]
-	// tag::actuator[]
-	compile("org.springframework.boot:spring-boot-starter-actuator")
-	// end::actuator[]
 	testCompile("junit:junit")
 }
