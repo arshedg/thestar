@@ -1,0 +1,788 @@
+Index: src/main/java/com/smile/application/dto/User.java
+===================================================================
+--- src/main/java/com/smile/application/dto/User.java	(revision )
++++ src/main/java/com/smile/application/dto/User.java	(revision )
+@@ -0,0 +1,10 @@
++package com.smile.application.dto;
++
++/**
++ * Created by agulshan on 12/11/17.
++ */
++public class User {
++    private String uuid;
++    private String name;
++
++}
+Index: src/main/java/com/smile/application/domain/User.java
+===================================================================
+--- src/main/java/com/smile/application/domain/User.java	(revision )
++++ src/main/java/com/smile/application/domain/User.java	(revision )
+@@ -0,0 +1,86 @@
++package com.smile.application.domain;
++
++import java.io.Serializable;
++import java.util.List;
++import javax.persistence.Entity;
++import javax.persistence.GeneratedValue;
++import javax.persistence.GenerationType;
++import javax.persistence.Id;
++import javax.persistence.Table;
++
++import com.fasterxml.jackson.annotation.JsonAutoDetect;
++import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
++import com.fasterxml.jackson.databind.annotation.JsonSerialize;
++import org.codehaus.jackson.annotate.JsonIgnoreType;
++
++/**
++ * Created by agulshan on 14/11/17.
++ */
++@Entity
++@Table(name = "users")
++@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY, getterVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY)
++public class User implements Serializable {
++
++    @Id
++    public String uuid;
++
++    private String userName;
++
++    private String email;
++
++    private String displayName;
++
++    private Double credits;
++
++    private String currencyType;
++
++
++    public String getUuid() {
++        return uuid;
++    }
++
++    public void setUuid(String uuid) {
++        this.uuid = uuid;
++    }
++
++    public String getUserName() {
++        return userName;
++    }
++
++    public void setUserName(String userName) {
++        this.userName = userName;
++    }
++
++    public String getEmail() {
++        return email;
++    }
++
++    public void setEmail(String email) {
++        this.email = email;
++    }
++
++    public String getDisplayName() {
++        return displayName;
++    }
++
++    public void setDisplayName(String displayName) {
++        this.displayName = displayName;
++    }
++
++    public Double getCredits() {
++        return credits;
++    }
++
++    public void setCredits(Double credits) {
++        this.credits = credits;
++    }
++
++    public String getCurrencyType() {
++        return currencyType;
++    }
++
++    public void setCurrencyType(String currencyType) {
++        this.currencyType = currencyType;
++    }
++
++}
+Index: src/main/java/com/smile/application/service/UserService.java
+===================================================================
+--- src/main/java/com/smile/application/service/UserService.java	(revision )
++++ src/main/java/com/smile/application/service/UserService.java	(revision )
+@@ -0,0 +1,16 @@
++package com.smile.application.service;
++
++import com.google.firebase.auth.FirebaseToken;
++import com.smile.application.domain.User;
++import org.springframework.transaction.annotation.Propagation;
++import org.springframework.transaction.annotation.Transactional;
++
++/**
++ * Created by agulshan on 16/11/17.
++ */
++public interface UserService {
++
++    @Transactional(propagation = Propagation.REQUIRED)
++    User userFromToken(FirebaseToken firebaseToken);
++
++}
+Index: src/main/java/com/smile/application/service/UserServiceImpl.java
+===================================================================
+--- src/main/java/com/smile/application/service/UserServiceImpl.java	(revision )
++++ src/main/java/com/smile/application/service/UserServiceImpl.java	(revision )
+@@ -0,0 +1,42 @@
++package com.smile.application.service;
++
++import java.util.Optional;
++
++import com.google.firebase.auth.FirebaseToken;
++import com.smile.application.domain.User;
++import com.smile.application.repository.UserRepository;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.stereotype.Service;
++
++/**
++ * Created by agulshan on 16/11/17.
++ */
++@Service
++public class UserServiceImpl implements UserService{
++    private final UserRepository userRepository;
++
++    @Autowired
++    public UserServiceImpl(UserRepository userRepository) {
++        this.userRepository = userRepository;
++    }
++
++
++    public User userFromToken(FirebaseToken firebaseToken) {
++        String uuid = firebaseToken.getUid();
++        Optional<User> user = userRepository.findById(uuid);
++        if (!user.isPresent()) {
++            User newUser = new User();
++            newUser.setUuid(firebaseToken.getUid());
++            newUser.setEmail(firebaseToken.getEmail());
++            newUser.setDisplayName(firebaseToken.getName());
++            newUser.setCurrencyType("Ruppee");
++            newUser.setDisplayName(firebaseToken.getName());
++            newUser.setCredits(0d);
++            userRepository.saveAndFlush(newUser);
++            return newUser;
++        }
++        return user.get();
++    }
++
++}
++
+Index: src/main/java/com/smile/application/security/SecurityConfig.java
+===================================================================
+--- src/main/java/com/smile/application/security/SecurityConfig.java	(revision )
++++ src/main/java/com/smile/application/security/SecurityConfig.java	(revision )
+@@ -0,0 +1,34 @@
++package com.smile.application.security;
++
++import org.springframework.context.annotation.Configuration;
++import org.springframework.http.HttpMethod;
++import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
++import org.springframework.security.config.annotation.web.builders.HttpSecurity;
++import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
++import org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration;
++import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
++import org.springframework.security.config.http.SessionCreationPolicy;
++import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
++
++/**
++ * Created by agulshan on 17/11/17.
++ */
++@Configuration
++@EnableWebSecurity
++public class SecurityConfig extends WebSecurityConfigurerAdapter {
++
++
++    protected static final String USER = "USER";
++
++    @Override
++    protected void configure(HttpSecurity httpSecurity) throws Exception {
++        httpSecurity.csrf().disable().
++                authorizeRequests()
++                    .antMatchers("/api/*").hasRole(USER)
++                .and()
++                    .formLogin().loginPage("/auth.html")
++                .and()
++                    .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
++    }
++
++}
+\ No newline at end of file
+Index: src/main/java/com/smile/application/security/SecurityManager.java
+===================================================================
+--- src/main/java/com/smile/application/security/SecurityManager.java	(revision )
++++ src/main/java/com/smile/application/security/SecurityManager.java	(revision )
+@@ -0,0 +1,46 @@
++package com.smile.application.security;
++
++import java.io.IOException;
++import java.io.InputStream;
++import java.util.concurrent.ExecutionException;
++import java.util.concurrent.Executors;
++
++import com.google.api.core.ApiFuture;
++import com.google.firebase.FirebaseApp;
++import com.google.firebase.FirebaseOptions;
++import com.google.firebase.auth.FirebaseAuth;
++import com.google.firebase.auth.FirebaseCredentials;
++import com.google.firebase.auth.UserRecord;
++
++/**
++ * Created by agulshan on 09/11/17.
++ */
++public class SecurityManager {
++
++    public void initialize() throws IOException {
++        InputStream keyFileStream = this.getClass().getClassLoader().getResourceAsStream("secret.json");
++        FirebaseOptions options = new FirebaseOptions.Builder()
++                .setCredential(FirebaseCredentials.fromCertificate(keyFileStream))
++                .setDatabaseUrl("https://celebrity-6faf6.firebaseio.com")
++                .build();
++        FirebaseApp.initializeApp(options);
++
++    }
++
++    public UserRecord getUserDetails(String uid) throws ExecutionException, InterruptedException {
++        ApiFuture<UserRecord> userFuture = FirebaseAuth.getInstance().getUserAsync(uid);
++
++        return null;
++    }
++
++    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
++        SecurityManager sm = new SecurityManager();
++        sm.initialize();
++        sm.getUserDetails("jljt3bbFJPOd6m44kX8D6ziiabU2");
++        Thread.sleep(100000);
++        //System.out.println(sm.getUserDetails("jljt3bbFJPOd6m44kX8D6ziiabU2"));
++    }
++
++
++}
++
+Index: src/main/java/com/smile/application/security/FireBaseRunnable.java
+===================================================================
+--- src/main/java/com/smile/application/security/FireBaseRunnable.java	(revision )
++++ src/main/java/com/smile/application/security/FireBaseRunnable.java	(revision )
+@@ -0,0 +1,33 @@
++package com.smile.application.security;
++
++import java.util.function.Consumer;
++
++import com.google.api.core.ApiFuture;
++/**
++ * Created by agulshan on 12/11/17.
++ */
++public class FireBaseRunnable<T> implements Runnable {
++
++    private ApiFuture<T> future;
++    private Consumer<T> consumer;
++    private Consumer<Throwable> onFailure;
++
++    public FireBaseRunnable(ApiFuture<T> future, Consumer<T> consumer, Consumer<Throwable> onFailure) {
++        this.future = future;
++        this.consumer = consumer;
++        this.onFailure = onFailure;
++    }
++
++    @Override
++    public void run() {
++        if(future.isDone()){
++            try {
++                consumer.accept(future.get());
++            } catch (Exception e) {
++                onFailure.accept(e);
++            }
++        }else{
++            onFailure.accept(new IllegalStateException("future is called before completion"));
++        }
++    }
++}
+Index: src/main/java/com/smile/application/security/FirebaseAuthFilter.java
+===================================================================
+--- src/main/java/com/smile/application/security/FirebaseAuthFilter.java	(revision )
++++ src/main/java/com/smile/application/security/FirebaseAuthFilter.java	(revision )
+@@ -0,0 +1,32 @@
++package com.smile.application.security;
++
++import java.io.IOException;
++import javax.servlet.FilterChain;
++import javax.servlet.ServletException;
++import javax.servlet.http.HttpServletRequest;
++import javax.servlet.http.HttpServletResponse;
++
++import com.smile.application.service.UserService;
++import org.springframework.util.StringUtils;
++import org.springframework.web.filter.OncePerRequestFilter;
++
++/**
++ * Created by agulshan on 17/11/17.
++ */
++public class FirebaseAuthFilter extends OncePerRequestFilter {
++
++    private final UserService userService;
++
++    public FirebaseAuthFilter(UserService userService) {
++        this.userService = userService;
++    }
++
++    @Override
++    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
++        String token = request.getHeader("FirebaseAuth");
++        if(StringUtils.isEmpty(token)){
++            filterChain.doFilter(request,response);
++        }
++
++    }
++}
+Index: src/main/java/com/smile/application/security/AuthenticationService.java
+===================================================================
+--- src/main/java/com/smile/application/security/AuthenticationService.java	(revision )
++++ src/main/java/com/smile/application/security/AuthenticationService.java	(revision )
+@@ -0,0 +1,44 @@
++package com.smile.application.security;
++
++import java.util.concurrent.ExecutorService;
++import java.util.function.Consumer;
++
++import com.google.api.core.ApiFuture;
++import com.google.firebase.auth.FirebaseAuth;
++import com.google.firebase.auth.FirebaseToken;
++import com.google.firebase.auth.UserRecord;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.beans.factory.annotation.Qualifier;
++import org.springframework.stereotype.Component;
++
++/**
++ * Created by agulshan on 12/11/17.
++ */
++@Component
++public class AuthenticationService {
++
++    private FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
++    private final ExecutorService executorService;
++
++    @Autowired
++    public AuthenticationService(@Qualifier("firebaseExecutorService") ExecutorService executorService) {
++        this.executorService = executorService;
++    }
++
++    public void accessUserRecord( String uuid,Consumer<UserRecord> consumer,Consumer<Throwable> onFailure){
++        ApiFuture<UserRecord> userRecordFuture = firebaseAuth.getUserAsync(uuid);
++        FireBaseRunnable<UserRecord> runnable = new FireBaseRunnable(userRecordFuture,consumer, onFailure);
++        userRecordFuture.addListener(runnable,executorService);
++    }
++
++    public void validateUser(String token,Consumer<FirebaseToken> onSuccess,Consumer<Throwable> onFailure){
++        ApiFuture<FirebaseToken> firebaseTokenApiFuture = firebaseAuth.verifyIdTokenAsync(token);
++        firebaseTokenApiFuture.addListener(new FireBaseRunnable(firebaseTokenApiFuture,onSuccess, onFailure),executorService);
++
++    }
++}
++
++
++
++
++
+Index: src/main/java/com/smile/application/security/ConsumerWithErrorHandler.java
+===================================================================
+--- src/main/java/com/smile/application/security/ConsumerWithErrorHandler.java	(revision )
++++ src/main/java/com/smile/application/security/ConsumerWithErrorHandler.java	(revision )
+@@ -0,0 +1,14 @@
++package com.smile.application.security;
++
++import java.util.function.Consumer;
++
++/**
++ * Created by agulshan on 14/11/17.
++ */
++@FunctionalInterface
++public interface ConsumerWithErrorHandler<T> extends Consumer<T> {
++    default void onError(T element){
++
++    }
++
++}
+Index: src/main/java/com/smile/application/controller/UserController.java
+===================================================================
+--- src/main/java/com/smile/application/controller/UserController.java	(revision )
++++ src/main/java/com/smile/application/controller/UserController.java	(revision )
+@@ -0,0 +1,46 @@
++package com.smile.application.controller;
++
++import java.util.concurrent.ExecutionException;
++
++import com.google.firebase.auth.FirebaseToken;
++import com.smile.application.domain.User;
++import com.smile.application.repository.UserRepository;
++import com.smile.application.security.AuthenticationService;
++import com.smile.application.service.UserService;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RequestMethod;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++import org.springframework.web.context.request.async.DeferredResult;
++
++/**
++ * Created by agulshan on 09/09/17.
++ */
++@RestController
++@RequestMapping("/api/user")
++public class UserController {
++
++    private final AuthenticationService authenticationService;
++    private final UserService UserService;
++
++    @Autowired
++    public UserController(AuthenticationService authenticationService, UserService UserService) {
++        this.authenticationService = authenticationService;
++        this.UserService = UserService;
++    }
++
++    @RequestMapping(method = RequestMethod.GET)
++    public String user(){
++        return "user";
++    }
++    @RequestMapping(method = RequestMethod.POST)
++    public DeferredResult authenticate(@RequestParam("token")String accessToken) throws ExecutionException, InterruptedException {
++        DeferredResult result = new DeferredResult();
++        authenticationService.validateUser(accessToken,
++                token->result.setResult(UserService.userFromToken(token)),
++                error->result.setErrorResult(error));
++        return result;
++    }
++
++}
+Index: src/main/java/com/smile/application/controller/CelebrityController.java
+===================================================================
+--- src/main/java/com/smile/application/controller/CelebrityController.java	(revision )
++++ src/main/java/com/smile/application/controller/CelebrityController.java	(revision )
+@@ -0,0 +1,18 @@
++package com.smile.application.controller;
++
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RequestMethod;
++import org.springframework.web.bind.annotation.RestController;
++
++/**
++ * Created by agulshan on 16/11/17.
++ */
++@RestController
++@RequestMapping("/api/celebrity")
++public class CelebrityController {
++
++    @RequestMapping(method = RequestMethod.GET)
++    public String celebrity(){
++        return "celebrity";
++    }
++}
+Index: src/main/java/com/smile/application/repository/UserRepository.java
+===================================================================
+--- src/main/java/com/smile/application/repository/UserRepository.java	(revision )
++++ src/main/java/com/smile/application/repository/UserRepository.java	(revision )
+@@ -0,0 +1,13 @@
++package com.smile.application.repository;
++
++import com.smile.application.domain.User;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++
++/**
++ * Created by agulshan on 16/11/17.
++ */
++@Repository
++public interface UserRepository extends JpaRepository<User,String> {
++
++}
+Index: src/main/java/com/smile/application/configuration/HazelCastConfiguration.java
+===================================================================
+--- src/main/java/com/smile/application/configuration/HazelCastConfiguration.java	(revision )
++++ src/main/java/com/smile/application/configuration/HazelCastConfiguration.java	(revision )
+@@ -0,0 +1,18 @@
++package com.smile.application.configuration;
++
++import com.hazelcast.core.Hazelcast;
++import com.hazelcast.core.HazelcastInstance;
++import org.springframework.context.annotation.Bean;
++import org.springframework.stereotype.Component;
++
++/**
++ * Created by agulshan on 14/11/17.
++ */
++@Component
++public class HazelCastConfiguration {
++    @Bean
++    HazelcastInstance hazelcastInstance() {
++        HazelcastInstance instance =  Hazelcast.newHazelcastInstance();
++        return instance;
++    }
++}
+Index: src/main/java/com/smile/application/configuration/FirebaseAuthConfiguration.java
+===================================================================
+--- src/main/java/com/smile/application/configuration/FirebaseAuthConfiguration.java	(revision )
++++ src/main/java/com/smile/application/configuration/FirebaseAuthConfiguration.java	(revision )
+@@ -0,0 +1,23 @@
++package com.smile.application.configuration;
++
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++
++import org.springframework.beans.factory.annotation.Qualifier;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.context.annotation.Bean;
++import org.springframework.stereotype.Component;
++
++/**
++ * Created by agulshan on 12/11/17.
++ */
++@Component
++public class FirebaseAuthConfiguration {
++
++    @Bean
++    @Qualifier("firebaseExecutorService")
++    public ExecutorService threadPool(@Value("${firebase.threadpool.size}") Integer threadPoolSize){
++        return Executors.newFixedThreadPool(threadPoolSize);
++    }
++
++}
+Index: src/main/java/com/smile/application/FansApplication.java
+===================================================================
+--- src/main/java/com/smile/application/FansApplication.java	(revision )
++++ src/main/java/com/smile/application/FansApplication.java	(revision )
+@@ -0,0 +1,25 @@
++package com.smile.application;
++
++import java.io.IOException;
++
++import com.smile.application.security.SecurityManager;
++import org.springframework.boot.SpringApplication;
++import org.springframework.boot.autoconfigure.SpringBootApplication;
++import org.springframework.boot.builder.SpringApplicationBuilder;
++import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
++
++@SpringBootApplication
++public class FansApplication extends SpringBootServletInitializer {
++
++	public static void main(String[] args) throws IOException {
++		SecurityManager securityManager =new SecurityManager();
++		securityManager.initialize();
++		SpringApplication.run(FansApplication.class, args);
++	}
++
++	@Override
++	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
++		return application.sources(FansApplication.class);
++	}
++
++}
+Index: src/main/java/com/smile/fans/FansApplication.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/smile/fans/FansApplication.java	(revision )
++++ src/main/java/com/smile/fans/FansApplication.java	(revision )
+@@ -1,12 +0,0 @@
+-package com.smile.fans;
+-
+-import org.springframework.boot.SpringApplication;
+-import org.springframework.boot.autoconfigure.SpringBootApplication;
+-
+-@SpringBootApplication
+-public class FansApplication {
+-
+-	public static void main(String[] args) {
+-		SpringApplication.run(FansApplication.class, args);
+-	}
+-}
+Index: src/main/java/com/smile/fans/UserController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/smile/fans/UserController.java	(revision )
++++ src/main/java/com/smile/fans/UserController.java	(revision )
+@@ -1,25 +0,0 @@
+-package com.smile.fans;
+-
+-import org.springframework.beans.factory.annotation.Autowired;
+-import org.springframework.stereotype.Controller;
+-import org.springframework.web.bind.annotation.GetMapping;
+-import org.springframework.web.bind.annotation.RequestAttribute;
+-import org.springframework.web.bind.annotation.RequestBody;
+-import org.springframework.web.bind.annotation.RestController;
+-
+-import javax.servlet.http.HttpServletRequest;
+-
+-/**
+- * Created by agulshan on 09/09/17.
+- */
+-@RestController("/login")
+-public class UserController {
+-
+-    @Autowired
+-    private HttpServletRequest request;
+-
+-    @GetMapping
+-    public String user(){
+-        return "logged in";
+-    }
+-}
+Index: src/main/resources/application.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/application.properties	(revision )
++++ src/main/resources/application.properties	(revision )
+@@ -1,0 +1,19 @@
++firebase.threadpool.size=10
++
++
++## Spring DATASOURCE (DataSourceAutoConfiguration & DataSourceProperties)
++spring.datasource.url = jdbc:postgresql://localhost:25432/redliner
++spring.datasource.username = redliner
++spring.datasource.password = redliner
++
++
++## Hibernate Properties
++# The SQL dialect makes Hibernate generate better SQL for the chosen database
++spring.jpa.properties.hibernate.dialect = org.hibernate.dialect.PostgreSQLDialect
++
++# Hibernate ddl auto (create, create-drop, validate, update)
++spring.jpa.hibernate.ddl-auto = update
++spring.jpa.properties.hibernate.enable_lazy_load_no_trans=true
++spring.jackson.serialization.fail-on-empty-beans=false
++server.context-path=/app
++
+Index: src/main/resources/static/auth.html
+===================================================================
+--- src/main/resources/static/auth.html	(revision )
++++ src/main/resources/static/auth.html	(revision )
+@@ -0,0 +1,78 @@
++<!DOCTYPE html>
++<html>
++  <head>
++    <meta charset="UTF-8">
++    <title>Sample FirebaseUI App</title>
++    <script src="https://www.gstatic.com/firebasejs/4.3.0/firebase.js"></script>
++    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
++	<script>
++	  // Initialize Firebase
++	  var config = {
++	    apiKey: "AIzaSyA1b2fQO4Org_WSG8xgz-fdVaJPUyO9cWQ",
++	    authDomain: "celebrity-6faf6.firebaseapp.com",
++	    databaseURL: "https://celebrity-6faf6.firebaseio.com",
++	    projectId: "celebrity-6faf6",
++	    storageBucket: "",
++	    messagingSenderId: "943774849629"
++	  };
++	  firebase.initializeApp(config);
++	</script>
++    <script src="https://cdn.firebase.com/libs/firebaseui/2.3.0/firebaseui.js"></script>
++    <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/2.3.0/firebaseui.css" />
++    <script type="text/javascript">
++      // FirebaseUI config.
++      var uiConfig = {
++        signInOptions: [
++          // Leave the lines as is for the providers you want to offer your users.
++          firebase.auth.GoogleAuthProvider.PROVIDER_ID,
++          firebase.auth.FacebookAuthProvider.PROVIDER_ID,
++          firebase.auth.TwitterAuthProvider.PROVIDER_ID,
++          firebase.auth.GithubAuthProvider.PROVIDER_ID,
++          firebase.auth.EmailAuthProvider.PROVIDER_ID,
++          firebase.auth.PhoneAuthProvider.PROVIDER_ID
++        ],
++        // Terms of service url.
++        tosUrl: '<your-tos-url>'
++      };
++
++      // Initialize the FirebaseUI Widget using Firebase.
++      var ui = new firebaseui.auth.AuthUI(firebase.auth());
++      // The start method will wait until the DOM is loaded.
++      ui.start('#firebaseui-auth-container', uiConfig);
++
++
++      firebase.auth().onAuthStateChanged(function(user) {
++          if (user) {
++              firebase.auth().currentUser.getToken(/* forceRefresh */ true).then(function(idToken) {
++                  $.post("/api/user",
++                      {
++                          token: idToken
++                      },
++                      function(data,status){
++                      if(status>299){
++                        alert("failed to login");
++                          ui.start('#firebaseui-auth-container', uiConfig);
++                      }else{
++                          alert("login passed");
++                      }
++                          alert("server response:"+data);
++                      });
++              }).catch(function(error) {
++                  // Handle error
++              });
++          } else {
++              // User is signed out.
++              // ...
++          }
++      });
++
++
++    </script>
++  </head>
++  <body>
++    <!-- The surrounding HTML is left untouched by FirebaseUI.
++         Your app may use that space for branding, controls and other customizations.-->
++    <h1>Welcome to My Awesome App</h1>
++    <div id="firebaseui-auth-container"></div>
++  </body>
++</html>
+\ No newline at end of file
+Index: src/main/resources/hazelcast.xml
+===================================================================
+--- src/main/resources/hazelcast.xml	(revision )
++++ src/main/resources/hazelcast.xml	(revision )
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="UTF-8"?>
++
++<hazelcast xsi:schemaLocation="http://www.hazelcast.com/schema/config hazelcast-config-3.8.xsd"
++           xmlns="http://www.hazelcast.com/schema/config"
++           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
++
++    <properties>
++        <property name="hazelcast.health.monitoring.delay.seconds">120</property>
++        <property name="hazelcast.jmx.detailed">true</property>
++        <property name="hazelcast.jmx">true</property>
++    </properties>
++    <group>
++        <name>redliner-hazelcast-group</name>
++        <password>redliner-hazelcast</password>
++    </group>
++
++    <lite-member enabled="false"/>
++    <map name="mergedPdfs">
++        <max-idle-seconds>1800</max-idle-seconds>
++    </map>
++</hazelcast>
+Index: src/main/resources/secret.json
+===================================================================
+--- src/main/resources/secret.json	(revision )
++++ src/main/resources/secret.json	(revision )
+@@ -0,0 +1,12 @@
++{
++  "type": "service_account",
++  "project_id": "celebrity-6faf6",
++  "private_key_id": "939c2dec945367aca2754cde77ea4d0fce084184",
++  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDbsyyjhc1n8+C9\nW/VP9xPbu80yMl9B2M5w4N3qbj5Q/uRQoEGqorpWEAuvNvCEmBPue2ci0lGeiyBC\nxIwAkREky6vGtDLu6+MS98qlp8JlB+wQ34w0ARh2nNNqtle28rxXxKAi4EAWSfyV\nXPV4g3lzgg3eL7FKbGOtletZsFP/A8L7hfXW1zPCQJg3JWnYr+aPh/U4g0shpTuN\n9PAo6glr1576Ue74uWcLG6NmUxceqNeTVMR1WLG3z8UnZu/bM2p4oRciejLmCwQ2\nqfWVbMD4P3c6s1OOoMm7zZzHljujyt9pVg2qRVgGTjaxqDYV2u6hleqNRCuc8k84\nZRSicc8rAgMBAAECggEARKpMYlNYbov/is9p7XM4pq2cpXqu4QKlCwyM709DdMcl\njrl3rKAtguaC8GFIbPinChtRkcWQMvAixhtt8mNkq05owrLhVGEvWGdP09SJ4k/G\njUOBK2PIRJIhVbHl2k0lZn0S27Og9BZttjUWl3LoC5zzPqVDURJtWPyJUT/WENaE\n4tXw78wxD0LBrK/KPZoHq3O2MATsBu/daQIiypRXbc3J0kw4eT0RVOv9bqH036nn\nXIjDelYO/LCVdW8+M1GHsOVN7mQLqpNwQ+YrEUDL0U/a+n17xXsDzHc7rFhrcioO\nZeccPP89rltvLfGGv74hXAsfmZbP0k6lh/qov+3yuQKBgQDvkZE/xzJq9Sk9COVE\nXr9KfN32mFTO2UmtERQUmsF7JmgeDyWZe71jfA4n3H4z4G+3RDhSWsMgU/De2JgZ\naeNkZWq6gJhOv0CLyn4kj7Hy59Q16Z+SOahIRqPumDgNLjG1Kl4K+zHA/XI+UXa7\nl+SqDGSpjmMhQF7La3Bi42o9RwKBgQDqxL6o0PnsdxsrPqE+3iJi8BB4vHasoJiX\n41TePvfmeBAcGEdOzvc1HTpSUvwZwJgmQ+Ld0waI62TKaWUx+OIzw1Yr/kgZvGSG\nWpF9UR7QfMg85ol44WcfnbGopB/n3MbjiCbW4GA1MQOx+AZTfpA7SC9laAiUXWuV\n0K2LrpLA/QKBgQDoaUULJZmA8AQoxSd+k5hqkAbZw2CLJ3t1XZsofhXz/geGGdW1\nN7k8+U3WV+9LLpHSrmkhZBHmm+iSmHe+N961ODo5YqXfx2S7+R81Iv5Uk5lpEBOR\nTUQ3kehZgOznxIfOpKKFbroO6xHY6TkRtsLMQaeqYotC5+rO15U5KjyX4wKBgQDA\nuGenH326jv/fnRczC5kAzP9IjbWB+oepT/XwR5KrP+5BkfCfkii/ElI5GGRZI5AD\nAYFwBXZ82Xew7ZojzqKqSXUowiIf9lYzMI/0Zq48CeM6kylQ8P/9pS8dODX02Xjv\neWogxKpVn/nfk7JlwiTWdWhq/17jpFjX8Ck23EUeZQKBgQCmYcFaneMTMqrzKrmA\nIhCu/kwelfKhm9k2IIspA92C5JvD52GzU+JReK1zMeBurrLHy+cPJ/sfTIIh1OBE\npV2Ig4Tsw8G5Rb+vBrP8xh3CQSQQ+J3as6uBTIlj8bt9IkOYdWL9fl8C35bNX2ho\nKNaPNGISWhBgoVfa2rTjVnAFlA==\n-----END PRIVATE KEY-----\n",
++  "client_email": "firebase-adminsdk-jc38d@celebrity-6faf6.iam.gserviceaccount.com",
++  "client_id": "106322982169988849430",
++  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
++  "token_uri": "https://accounts.google.com/o/oauth2/token",
++  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
++  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-jc38d%40celebrity-6faf6.iam.gserviceaccount.com"
++}

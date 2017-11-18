@@ -1,11 +1,11 @@
 <component name="libraryTable">
   <library name="Gradle: org.springframework.boot:spring-boot-starter-jetty:2.0.0.BUILD-SNAPSHOT">
     <CLASSES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-jetty/2.0.0.BUILD-SNAPSHOT/ffceefb260e48c3e54b53d009c00f6924ce3875f/spring-boot-starter-jetty-2.0.0.BUILD-SNAPSHOT.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-jetty/2.0.0.BUILD-SNAPSHOT/74edd7d48e43c94899eedd2d00840b9661967789/spring-boot-starter-jetty-2.0.0.BUILD-SNAPSHOT.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-jetty/2.0.0.BUILD-SNAPSHOT/17783f84bc9da01f4e10b980357e65d195d616b9/spring-boot-starter-jetty-2.0.0.BUILD-SNAPSHOT-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-jetty/2.0.0.BUILD-SNAPSHOT/71bf0c343830e51fbad6dfbe8ed40b6401c47563/spring-boot-starter-jetty-2.0.0.BUILD-SNAPSHOT-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

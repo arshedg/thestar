@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<hazelcast xsi:schemaLocation="http://www.hazelcast.com/schema/config hazelcast-config-3.8.xsd"
+           xmlns="http://www.hazelcast.com/schema/config"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <properties>
+        <property name="hazelcast.health.monitoring.delay.seconds">120</property>
+        <property name="hazelcast.jmx.detailed">true</property>
+        <property name="hazelcast.jmx">true</property>
+    </properties>
+    <group>
+        <name>redliner-hazelcast-group</name>
+        <password>redliner-hazelcast</password>
+    </group>
+
+    <lite-member enabled="false"/>
+    <map name="mergedPdfs">
+        <max-idle-seconds>1800</max-idle-seconds>
+    </map>
+</hazelcast>
